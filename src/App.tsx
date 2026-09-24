@@ -1,0 +1,15 @@
+import { Navigate,Route,Routes } from 'react-router-dom'
+import { useAuth } from './state/AuthContext'
+import AppShell from './components/AppShell'
+import LoginPage from './pages/LoginPage'
+import DashboardPage from './pages/DashboardPage'
+import AttendancePage from './pages/AttendancePage'
+import YouthListPage from './pages/YouthListPage'
+import YouthProfilePage from './pages/YouthProfilePage'
+import CalendarPage from './pages/CalendarPage'
+import ProjectsPage from './pages/ProjectsPage'
+import ProjectDetailPage from './pages/ProjectDetailPage'
+import AlertsPage from './pages/AlertsPage'
+import AdminPage from './pages/AdminPage'
+function Protected(){const {user,loading}=useAuth();if(loading)return <div className="center-screen">Cargando…</div>;if(!user)return <Navigate to="/login" replace/>;return <AppShell><Routes><Route path="/" element={<DashboardPage/>}/><Route path="/asistencia" element={<AttendancePage/>}/><Route path="/jovenes" element={<YouthListPage/>}/><Route path="/jovenes/:id" element={<YouthProfilePage/>}/><Route path="/cronograma" element={<CalendarPage/>}/><Route path="/proyectos" element={<ProjectsPage/>}/><Route path="/proyectos/:id" element={<ProjectDetailPage/>}/><Route path="/alertas" element={<AlertsPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></AppShell>}
+export default function App(){return <Routes><Route path="/login" element={<LoginPage/>}/><Route path="/*" element={<Protected/>}/></Routes>}

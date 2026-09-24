@@ -1,0 +1,1 @@
+export default function StatCard({label,value,tone='default',note}:{label:string;value:string|number;tone?:'default'|'purple'|'green'|'red';note?:string}){return <div className={`stat-card ${tone}`}><span>{label}</span><strong>{value}</strong>{note&&<small>{note}</small>}</div>}

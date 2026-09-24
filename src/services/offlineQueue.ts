@@ -1,0 +1,5 @@
+const DB='grupo-intermedio',STORE='pending-attendance',VER=1
+function openDb():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,VER);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+export async function queueAttendance(item:Record<string,unknown>){const db=await openDb();const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(item);await new Promise<void>((res,rej)=>{tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
+export async function readQueue(){const db=await openDb();const tx=db.transaction(STORE,'readonly');const r=tx.objectStore(STORE).getAll();return new Promise<Record<string,unknown>[]>((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+export async function clearQueue(){const db=await openDb();const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).clear()}
