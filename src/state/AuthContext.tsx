@@ -13,17 +13,18 @@ export function AuthProvider({children}:{children:ReactNode}){
   const [loading,setLoading]=useState(!USE_MOCKS)
   useEffect(()=>{
     if(USE_MOCKS||!supabase){setLoading(false);return}
+    const client=supabase
     let active=true
     const load=async()=>{
-      const {data}=await supabase.auth.getSession()
+      const {data}=await client.auth.getSession()
       const au=data.session?.user
       if(!active)return
       if(!au){setUser(null);setLoading(false);return}
-      const {data:profile}=await supabase.from('app_users').select('id,email,full_name,role,permissions').eq('id',au.id).single()
+      const {data:profile}=await client.from('app_users').select('id,email,full_name,role,permissions').eq('id',au.id).single()
       setUser(profile as AppUser|null);setLoading(false)
     }
     load()
-    const {data:l}=supabase.auth.onAuthStateChange(()=>load())
+    const {data:l}=client.auth.onAuthStateChange(()=>load())
     return()=>{active=false;l.subscription.unsubscribe()}
   },[])
   const value=useMemo<Ctx>(()=>({user,loading,
