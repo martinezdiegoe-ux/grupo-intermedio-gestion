@@ -7,7 +7,7 @@ export interface AppUser {
 }
 export interface YoungPerson {
   id:string; first_name:string; last_name:string; birth_date:string;
-  phone?:string; address?:string; sector?:string; active:boolean;
+  phone?:string; address?:string; group_name?:string; guardian_name?:string; guardian_phone?:string; active:boolean;
   attendance_rate:number; sundays:number; rehearsals:number;
   traffic_light:TrafficLight; groups?:string[]
 }
