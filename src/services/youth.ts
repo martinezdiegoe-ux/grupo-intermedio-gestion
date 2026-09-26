@@ -14,3 +14,15 @@ export async function getYouth(id:string):Promise<YoungPerson|null>{
  if(error)throw error
  return data as YoungPerson
 }
+export async function updateYouth(id:string, changes:Partial<YoungPerson>):Promise<YoungPerson>{
+ if(USE_MOCKS||!supabase){
+  const index=demoYouth.findIndex(y=>y.id===id)
+  if(index<0)throw new Error('Joven no encontrado.')
+  demoYouth[index]={...demoYouth[index],...changes}
+  return demoYouth[index]
+ }
+ const payload={first_name:changes.first_name,last_name:changes.last_name,birth_date:changes.birth_date,phone:changes.phone,address:changes.address}
+ const {data,error}=await supabase.from('young_people').update(payload).eq('id',id).select().single()
+ if(error)throw error
+ return data as YoungPerson
+}
