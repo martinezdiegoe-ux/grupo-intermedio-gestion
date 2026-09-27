@@ -2,24 +2,28 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const base = process.env.GITHUB_ACTIONS ? '/grupo-intermedio-gestion/' : '/'
+
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/grupo-intermedio-gestion/' : '/',
+  base,
   plugins:[
     react(),
     VitePWA({
       registerType:'autoUpdate',
       includeAssets:['icons/icon-192.svg','icons/icon-512.svg'],
       manifest:{
+        id:base,
+        scope:base,
         name:'Asamblea Cristiana — Grupo Intermedio',
         short_name:'Grupo Intermedio',
         description:'Gestión de asistencia, jóvenes, cronograma y proyectos.',
         theme_color:'#0f1020',
         background_color:'#090a12',
         display:'standalone',
-        start_url:'/',
+        start_url:base,
         icons:[
-          {src:'/icons/icon-192.svg',sizes:'192x192',type:'image/svg+xml'},
-          {src:'/icons/icon-512.svg',sizes:'512x512',type:'image/svg+xml'}
+          {src:'icons/icon-192.svg',sizes:'192x192',type:'image/svg+xml'},
+          {src:'icons/icon-512.svg',sizes:'512x512',type:'image/svg+xml'}
         ]
       }
     })
