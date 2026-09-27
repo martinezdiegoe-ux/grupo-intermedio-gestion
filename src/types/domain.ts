@@ -11,6 +11,13 @@ export interface YoungPerson {
   attendance_rate:number; sundays:number; rehearsals:number;
   traffic_light:TrafficLight; groups?:string[]
 }
+export interface MedicalProfile {
+  young_person_id:string; blood_type:string|null; allergies:string|null;
+  medications:string|null; medication_reason:string|null; health_provider:string|null;
+  insurance_member_number:string|null; relevant_conditions:string|null;
+  surgeries:string|null; activity_restrictions:string|null; dietary_restrictions:string|null;
+  emergency_notes:string|null
+}
 export interface EventItem {
   id:string; title:string;
   kind:'sunday'|'rehearsal'|'class'|'special'|'meeting'|'camp'|'other';
