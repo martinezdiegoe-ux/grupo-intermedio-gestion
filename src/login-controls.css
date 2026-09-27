@@ -1,0 +1,5 @@
+.login-card .install-btn,.login-card .install-control .install-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:12px;padding:12px 16px;border:1px solid #55517b;border-radius:14px;background:#252541;color:#f7f7fb;font-weight:700}
+.login-card .install-btn:hover{border-color:#936dff}
+.login-card [role="status"]{margin-top:12px;padding:12px 14px;border-radius:14px;background:#14372c;color:#86e5bd}
+.login-card .install-control small{color:#b5aed0;line-height:1.5}
+.login-card>input[type="password"]{width:100%;padding:14px;border-radius:14px;border:1px solid #33365d;background:#0e0f1f;color:white}
