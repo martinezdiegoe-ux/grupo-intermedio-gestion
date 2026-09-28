@@ -51,6 +51,19 @@ export async function updateYouth(id:string, changes:Partial<YoungPerson>):Promi
  if(error)throw error
  return data as YoungPerson
 }
+export async function listGroups():Promise<{id:string;name:string}[]>{
+ if(USE_MOCKS||!supabase)return ['Elegidos','León de Judá','Guerreros de Gedeón','Valientes de David'].map(name=>({id:name,name}))
+ const {data,error}=await supabase.from('groups').select('id,name').eq('active',true).order('name')
+ if(error)throw error
+ return data??[]
+}
+export async function createYouth(input:{first_name:string;last_name:string;birth_date:string;phone:string;group_id:string}):Promise<string>{
+ if(USE_MOCKS||!supabase){const id=crypto.randomUUID();demoYouth.push({id,first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,phone:input.phone,group_name:input.group_id,active:true,attendance_rate:0,sundays:0,rehearsals:0,traffic_light:'green'});return id}
+ const {data,error}=await supabase.from('young_people').insert({first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,phone:input.phone||null}).select('id').single()
+ if(error)throw error
+ if(input.group_id){const {error:linkError}=await supabase.from('young_people_groups').insert({young_person_id:data.id,group_id:input.group_id});if(linkError)throw new Error(`El joven se creó, pero no se pudo asignar el grupo: ${linkError.message}`)}
+ return data.id
+}
 export async function updateGuardianPhone(id:string,name:string,phone:string):Promise<void>{
  if(USE_MOCKS||!supabase){const y=demoYouth.find(y=>y.id===id);if(y){y.guardian_name=name;y.guardian_phone=phone}return}
  const {data:links,error}=await supabase.from('young_person_guardians').select('guardian_id').eq('young_person_id',id).order('is_emergency_contact',{ascending:false}).limit(1)
