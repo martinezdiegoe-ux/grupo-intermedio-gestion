@@ -65,3 +65,9 @@ export async function updateProjectStatus(projectId:string,status:Project['statu
  const {error}=await supabase.from('projects').update({status}).eq('id',projectId)
  if(error)throw error
 }
+export async function deleteProject(projectId:string):Promise<void>{
+ if(USE_MOCKS||!supabase){const index=demoProjects.findIndex(p=>p.id===projectId);if(index<0)throw new Error('Proyecto no encontrado.');demoProjects.splice(index,1);return}
+ const {data,error}=await supabase.from('projects').delete().eq('id',projectId).select('id').maybeSingle()
+ if(error)throw error
+ if(!data)throw new Error('No se eliminó el proyecto. Revisá los permisos de tu cuenta.')
+}
