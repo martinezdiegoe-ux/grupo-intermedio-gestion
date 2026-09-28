@@ -24,11 +24,11 @@ export interface EventItem {
   starts_at:string; location?:string; instructor?:string
 }
 export interface ProjectTask {
-  id:string; title:string; assignee:string; due_date?:string;
+  id:string; title:string; assignee:string; assignee_id?:string; description?:string; due_date?:string;
   status:'pending'|'in_progress'|'blocked'|'done'; weight:number
 }
 export interface Project {
-  id:string; name:string; owner:string; progress:number;
+  id:string; name:string; owner:string; description?:string; start_date?:string; end_date?:string; owner_user_id?:string; progress:number;
   status:'planned'|'active'|'completed'|'cancelled'; tasks:ProjectTask[]
 }
 export interface AlertItem {
