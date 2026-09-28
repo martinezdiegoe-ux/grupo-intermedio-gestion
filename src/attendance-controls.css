@@ -4,3 +4,4 @@
 .group-filter select:focus{border-color:#8b58ff;box-shadow:0 0 0 3px rgba(139,88,255,.2)}
 .group-filter .select-wrap svg{position:absolute;right:16px;top:50%;transform:translateY(-50%);pointer-events:none;color:#a79cc8}
 .group-filter option{background:#191a31;color:#f7f7fb}
+.date-control{display:block;width:100%;min-height:52px;margin-top:8px;padding:12px 16px;border:1px solid #33365d;border-radius:16px;background:#191a31;color:#f7f7fb;color-scheme:dark}
