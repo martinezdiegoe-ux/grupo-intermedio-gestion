@@ -11,7 +11,14 @@ type Bar={event:AttendanceEvent;rate:number;count:number}
 const dateText=(value:string)=>new Date(value).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',timeZone:'America/Argentina/Buenos_Aires'})
 export default function DashboardPage(){
  const [youth,setYouth]=useState<YoungPerson[]>([]),[alerts,setAlerts]=useState<AlertItem[]>([]),[events,setEvents]=useState<EventItem[]>([]),[bars,setBars]=useState<Bar[]>([]),[error,setError]=useState(''),[loading,setLoading]=useState(true);const nav=useNavigate()
- useEffect(()=>{Promise.all([listYouth(),listAlerts(),listUpcomingEvents(),listAttendanceSummary()]).then(([y,a,e,b])=>{setYouth(y);setAlerts(a);setEvents(e);setBars(b)}).catch(e=>setError(`No se pudo cargar Inicio: ${e.message}`)).finally(()=>setLoading(false))},[])
+ useEffect(()=>{Promise.allSettled([listYouth(),listAlerts(),listUpcomingEvents(),listAttendanceSummary()]).then(([y,a,e,b])=>{
+  if(y.status==='fulfilled')setYouth(y.value)
+  if(a.status==='fulfilled')setAlerts(a.value)
+  if(e.status==='fulfilled')setEvents(e.value)
+  if(b.status==='fulfilled')setBars(b.value)
+  const failures=[y,a,e,b].filter(result=>result.status==='rejected')
+  if(failures.length)setError(`No se pudieron cargar ${[y,a,e,b].map((result,index)=>result.status==='rejected'?['jóvenes','alertas','eventos','asistencias'][index]:'').filter(Boolean).join(', ')}. Revisá los permisos de esas secciones.`)
+ }).finally(()=>setLoading(false))},[])
  const rate=youth.length?Math.round(youth.reduce((a,b)=>a+b.attendance_rate,0)/youth.length):0
  const lights:{value:TrafficLight;label:string}[]=[{value:'green',label:'Regular'},{value:'yellow',label:'Seguimiento'},{value:'red',label:'Contactar'}]
  const next=events[0]
