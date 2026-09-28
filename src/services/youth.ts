@@ -12,10 +12,10 @@ export async function getYouth(id:string):Promise<YoungPerson|null>{
  if(USE_MOCKS||!supabase)return demoYouth.find(y=>y.id===id)??null
  const {data,error}=await supabase.from('young_people_view').select('*').eq('id',id).single()
  if(error)throw error
- const {data:photo,error:photoError}=await supabase.from('young_people').select('photo_path').eq('id',id).single()
- if(photoError)throw photoError
- const {data:links,error:guardianError}=await supabase.from('young_person_guardians').select('guardian_id,guardians(full_name,phone)').eq('young_person_id',id).order('is_emergency_contact',{ascending:false}).limit(1)
- if(guardianError)throw guardianError
+ const [{data:photo},{data:links}]=await Promise.all([
+  supabase.from('young_people').select('photo_path').eq('id',id).maybeSingle(),
+  supabase.from('young_person_guardians').select('guardian_id,guardians(full_name,phone)').eq('young_person_id',id).order('is_emergency_contact',{ascending:false}).limit(1)
+ ])
  const guardian=links?.[0]?.guardians as unknown as {full_name:string;phone:string|null}|undefined
  return {...data,photo_path:photo?.photo_path,guardian_name:guardian?.full_name,guardian_phone:guardian?.phone} as YoungPerson
 }
