@@ -1,30 +1,38 @@
 import { useEffect,useMemo,useState } from 'react'
 import { ChevronDown,Search } from 'lucide-react'
-import { getAttendance,listAttendanceEvents,saveAttendance } from '../services/attendance'
+import { getAttendance,listAttendanceEvents,localDate,saveAttendance } from '../services/attendance'
 import type { AttendanceEvent } from '../services/attendance'
 import { listYouth } from '../services/youth'
-import { queueAttendance } from '../services/offlineQueue'
-import { useOnlineStatus } from '../hooks/useOnlineStatus'
-import { USE_MOCKS } from '../lib/config'
 import type { AttendanceStatus,YoungPerson } from '../types/domain'
+
 export default function AttendancePage(){
- const [youth,setYouth]=useState<YoungPerson[]>([]),[loadError,setLoadError]=useState(''),[query,setQuery]=useState(''),[filter,setFilter]=useState<'all'|'present'|'absent'>('all'),[group,setGroup]=useState('Todos'),[meeting,setMeeting]=useState<'sunday'|'rehearsal'>('sunday'),[status,setStatus]=useState<Record<string,AttendanceStatus>>({}),[saved,setSaved]=useState(''),[events,setEvents]=useState<AttendanceEvent[]>([]),[eventId,setEventId]=useState(''),[loadingAttendance,setLoadingAttendance]=useState(false); const online=useOnlineStatus()
- useEffect(()=>{listYouth().then(list=>{setYouth(list);if(USE_MOCKS)setStatus(Object.fromEntries(list.map((y,i)=>[y.id,i%4===1?'absent':'present'])) as Record<string,AttendanceStatus>)}).catch(()=>setLoadError('No se pudo cargar la lista de jóvenes.'))},[])
- useEffect(()=>{listAttendanceEvents().then(items=>{setEvents(items);setEventId(items[0]?.id??'')}).catch(()=>setLoadError('No se pudieron cargar las fechas de asistencia.'))},[])
- useEffect(()=>{if(!eventId)return;setLoadingAttendance(true);getAttendance(eventId).then(setStatus).catch(()=>setLoadError('No se pudo cargar la asistencia de esa fecha.')).finally(()=>setLoadingAttendance(false))},[eventId])
- const groups=['Todos','Elegidos','León de Judá','Guerreros de Gedeón','Valientes de David']
- const visible=useMemo(()=>youth.filter(y=>{const n=`${y.first_name} ${y.last_name}`.toLowerCase();if(!n.includes(query.toLowerCase()))return false;if(group!=='Todos'&&y.group_name!==group)return false;if(filter==='present'&&status[y.id]!=='present')return false;if(filter==='absent'&&status[y.id]!=='absent')return false;return true}),[youth,query,group,filter,status])
- const present=Object.values(status).filter(s=>s==='present').length
- async function save(){if(!eventId){setSaved('Seleccioná una fecha de asistencia.');return}try{if(!online){for(const [young_person_id,s] of Object.entries(status))await queueAttendance({id:`${eventId}:${young_person_id}`,event_id:eventId,young_person_id,status:s,updated_at:new Date().toISOString()});setSaved('Guardado en el dispositivo. Se sincronizará al recuperar Internet.');return}await saveAttendance(eventId,status);setSaved('Asistencia guardada.')}catch{setSaved('No se pudo guardar la asistencia.')}}
- const selectedEvent=events.find(event=>event.id===eventId);const formatDate=(date:string)=>new Intl.DateTimeFormat('es-AR',{day:'2-digit',month:'2-digit',timeZone:'America/Argentina/Buenos_Aires'}).format(new Date(date));
+ const [youth,setYouth]=useState<YoungPerson[]>([]),[events,setEvents]=useState<AttendanceEvent[]>([])
+ const [date,setDate]=useState(localDate(new Date().toISOString())),[meeting,setMeeting]=useState<'sunday'|'rehearsal'>('sunday')
+ const [status,setStatus]=useState<Record<string,AttendanceStatus>>({}),[query,setQuery]=useState(''),[group,setGroup]=useState('Todos')
+ const [filter,setFilter]=useState<'all'|'present'|'absent'>('all'),[error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false)
+ useEffect(()=>{listYouth().then(setYouth).catch(e=>setError(`No se pudo cargar la lista de jóvenes: ${e.message}`));listAttendanceEvents().then(setEvents).catch(e=>setError(`No se pudieron cargar las fechas: ${e.message}`))},[])
+ const event=events.find(e=>e.kind===meeting&&localDate(e.starts_at)===date)
+ useEffect(()=>{let active=true;setStatus({});setNotice('');if(event)getAttendance(event.id).then(rows=>{if(active)setStatus(rows)}).catch(e=>{if(active)setError(`No se pudo consultar la asistencia: ${e.message}`)});return()=>{active=false}},[event?.id,date,meeting])
+ const groups=['Todos',...new Set(youth.map(y=>y.group_name).filter((name):name is string=>Boolean(name)))]
+ const attendees=youth.filter(y=>group==='Todos'||y.group_name===group)
+ const visible=useMemo(()=>attendees.filter(y=>`${y.first_name} ${y.last_name}`.toLowerCase().includes(query.toLowerCase())).filter(y=>filter==='all'||(filter==='present'?status[y.id]==='present':status[y.id]!=='present')),[attendees,query,filter,status])
+ const present=attendees.filter(y=>status[y.id]==='present').length
+ async function save(){setSaving(true);setError('');setNotice('');try{
+  if(!navigator.onLine)throw new Error('Necesitás conexión para guardar la asistencia.')
+  const entries=Object.fromEntries(attendees.map(y=>[y.id,status[y.id]??'absent'])) as Record<string,AttendanceStatus>
+  if(!attendees.length)throw new Error('No hay jóvenes en el grupo seleccionado.')
+  const savedEvent=await saveAttendance(date,meeting,event,entries)
+  if(!event)setEvents(list=>[savedEvent,...list]);setStatus(previous=>({...previous,...entries}));setNotice(`Asistencia guardada: ${formatDate(date)} · ${group}.`)
+ }catch(e){setError(e instanceof Error?e.message:'No se pudo guardar la asistencia.')}finally{setSaving(false)}}
  const meetingLabel=meeting==='sunday'?'Domingo · Grupo Intermedio':'Sábado · Ensayo del Coro Intermedio'
- return <><div className="page-title"><div><h1>Tomar asistencia</h1><span>{meetingLabel}{selectedEvent?` · ${formatDate(selectedEvent.starts_at)}`:''}</span></div><div className="pill">{present} / {youth.length}</div></div>
- <div className="segmented"><button className={meeting==='sunday'?'active':''} onClick={()=>{setMeeting('sunday');setEventId(events.find(e=>e.kind==='sunday')?.id??'')}}>Domingo</button><button className={meeting==='rehearsal'?'active':''} onClick={()=>{setMeeting('rehearsal');setEventId(events.find(e=>e.kind==='rehearsal')?.id??'')}}>Sábado · Ensayo</button></div>
- <label className="field-label group-filter">Fecha de asistencia<span className="select-wrap"><select value={eventId} onChange={e=>{setEventId(e.target.value);setSaved('')}}><option value="">{events.length?'Seleccionar fecha':'Sin encuentros registrados'}</option>{events.filter(e=>e.kind===meeting).map(e=><option key={e.id} value={e.id}>{formatDate(e.starts_at)} · {e.title}</option>)}</select><ChevronDown size={20} aria-hidden="true"/></span></label>
+ const formatDate=(day:string)=>day.slice(8,10)+'/'+day.slice(5,7)
+ return <><div className="page-title"><div><h1>Tomar asistencia</h1><span>{meetingLabel} · {formatDate(date)}</span></div><div className="pill">{present} / {attendees.length}</div></div>
+ <div className="segmented"><button className={meeting==='sunday'?'active':''} onClick={()=>setMeeting('sunday')}>Domingo</button><button className={meeting==='rehearsal'?'active':''} onClick={()=>setMeeting('rehearsal')}>Sábado · Ensayo</button></div>
+ <label className="field-label group-filter">Fecha de asistencia<input className="date-control" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
  <label className="field-label group-filter">Grupo<span className="select-wrap"><select value={group} onChange={e=>setGroup(e.target.value)}>{groups.map(name=><option key={name}>{name}</option>)}</select><ChevronDown size={20} aria-hidden="true"/></span></label>
- {loadError&&<div className="error-box" role="alert">{loadError}</div>}
+ {error&&<div className="error-box" role="alert">{error}</div>}
  <div className="search-box"><Search size={19}/><input placeholder="Buscar joven…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
- <div className="segmented"><button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Todos ({youth.length})</button><button className={filter==='present'?'active':''} onClick={()=>setFilter('present')}>Presentes</button><button className={filter==='absent'?'active':''} onClick={()=>setFilter('absent')}>Ausentes</button></div>
+ <div className="segmented"><button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Todos ({attendees.length})</button><button className={filter==='present'?'active':''} onClick={()=>setFilter('present')}>Presentes</button><button className={filter==='absent'?'active':''} onClick={()=>setFilter('absent')}>Ausentes</button></div>
  <div className="list-stack">{visible.map(y=><div className="person-row" key={y.id}><div className="avatar">{y.first_name[0]}{y.last_name[0]}</div><div className="grow"><strong>{y.first_name} {y.last_name}</strong><small>{y.group_name??'Sin grupo asignado'}</small></div><button aria-label={`Cambiar asistencia de ${y.first_name} ${y.last_name}`} className={`toggle ${status[y.id]==='present'?'on':''}`} onClick={()=>setStatus(s=>({...s,[y.id]:s[y.id]==='present'?'absent':'present'}))}><span/></button></div>)}</div>
- <button className="primary-btn sticky-action" disabled={!eventId||loadingAttendance} onClick={save}>Guardar asistencia</button>{saved&&<div className="success-box">{saved}</div>}</>
+ <button className="primary-btn sticky-action" disabled={saving||!date||!attendees.length} onClick={save}>{saving?'Guardando…':'Guardar asistencia'}</button>{notice&&<div className="success-box" role="status">{notice}</div>}</>
 }
