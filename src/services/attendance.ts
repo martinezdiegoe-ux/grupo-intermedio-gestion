@@ -17,6 +17,14 @@ export async function getAttendance(eventId:string):Promise<Record<string,Attend
  if(error)throw error
  return Object.fromEntries((data??[]).map(row=>[row.young_person_id,row.status]))
 }
+export async function listAttendanceSummary():Promise<{event:AttendanceEvent;rate:number;count:number}[]>{
+ if(USE_MOCKS||!supabase)return []
+ const events=(await listAttendanceEvents()).filter(e=>new Date(e.starts_at)<=new Date()).slice(0,6).reverse()
+ if(!events.length)return []
+ const {data,error}=await supabase.from('attendance').select('event_id,status').in('event_id',events.map(e=>e.id))
+ if(error)throw error
+ return events.map(event=>{const rows=(data??[]).filter(row=>row.event_id===event.id);const count=rows.filter(row=>row.status==='present'||row.status==='absent'||row.status==='justified').length;return {event,count,rate:count?Math.round(100*rows.filter(row=>row.status==='present').length/count):0}}).filter(item=>item.count>0)
+}
 export async function saveAttendance(date:string,kind:'sunday'|'rehearsal',existing:AttendanceEvent|undefined,status:Record<string,AttendanceStatus>):Promise<AttendanceEvent>{
  if(USE_MOCKS||!supabase){const event=existing??{id:`${kind}:${date}`,kind,title:kind==='sunday'?'Grupo Intermedio':'Ensayo',starts_at:`${date}T10:00:00-03:00`};demoRecords.set(event.id,{...demoRecords.get(event.id),...status});return event}
  let event=existing
