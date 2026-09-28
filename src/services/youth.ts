@@ -48,7 +48,7 @@ export async function updateYouth(id:string, changes:Partial<YoungPerson>):Promi
  }
  const payload={first_name:changes.first_name,last_name:changes.last_name,birth_date:changes.birth_date,phone:changes.phone,address:changes.address,photo_path:changes.photo_path}
  const {data,error}=await supabase.from('young_people').update(payload).eq('id',id).select().single()
- if(error)throw error
+ if(error)throw new Error(`Datos personales: ${error.message}`)
  return data as YoungPerson
 }
 export async function listGroups():Promise<{id:string;name:string}[]>{
@@ -67,8 +67,8 @@ export async function createYouth(input:{first_name:string;last_name:string;birt
 export async function updateGuardianPhone(id:string,name:string,phone:string):Promise<void>{
  if(USE_MOCKS||!supabase){const y=demoYouth.find(y=>y.id===id);if(y){y.guardian_name=name;y.guardian_phone=phone}return}
  const {data:links,error}=await supabase.from('young_person_guardians').select('guardian_id').eq('young_person_id',id).order('is_emergency_contact',{ascending:false}).limit(1)
- if(error)throw error
+ if(error)throw new Error(`Consulta del tutor: ${error.message}`)
  const guardianId=links?.[0]?.guardian_id
- if(guardianId){const {error:updateError}=await supabase.from('guardians').update({full_name:name,phone}).eq('id',guardianId);if(updateError)throw updateError}
- else if(name||phone){const {data:guardian,error:createError}=await supabase.from('guardians').insert({full_name:name||'Tutor',phone}).select('id').single();if(createError)throw createError;const {error:linkError}=await supabase.from('young_person_guardians').insert({young_person_id:id,guardian_id:guardian.id,is_emergency_contact:true});if(linkError)throw linkError}
+ if(guardianId){const {error:updateError}=await supabase.from('guardians').update({full_name:name,phone}).eq('id',guardianId);if(updateError)throw new Error(`Tutor: ${updateError.message}`)}
+ else if(name||phone){const {data:guardian,error:createError}=await supabase.from('guardians').insert({full_name:name||'Tutor',phone}).select('id').single();if(createError)throw new Error(`Tutor: ${createError.message}`);const {error:linkError}=await supabase.from('young_person_guardians').insert({young_person_id:id,guardian_id:guardian.id,is_emergency_contact:true});if(linkError)throw new Error(`Vínculo con tutor: ${linkError.message}`)}
 }
