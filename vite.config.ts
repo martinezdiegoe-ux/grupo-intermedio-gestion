@@ -10,6 +10,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType:'autoUpdate',
+      workbox:{importScripts:[`${base}push-handler.js`]},
       includeAssets:['icons/ac-512.svg','icons/ac-192.png','icons/ac-512.png'],
       manifest:{
         id:base,
