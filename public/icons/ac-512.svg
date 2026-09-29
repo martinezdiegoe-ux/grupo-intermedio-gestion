@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Asamblea Cristiana, Grupo Intermedio">
+  <rect width="512" height="512" rx="112" fill="#17182c"/>
+  <circle cx="256" cy="256" r="216" fill="#201a43" stroke="#6e3cff" stroke-width="7"/>
+  <rect x="104" y="104" width="304" height="304" rx="12" fill="#19182f" stroke="#a987ff" stroke-width="6"/>
+  <rect x="120" y="120" width="272" height="272" rx="4" fill="none" stroke="#5e42af" stroke-width="3"/>
+  <text x="256" y="294" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="158" font-weight="700" letter-spacing="-11" fill="#ffffff">AC</text>
+  <path d="M156 325h200" stroke="#7752da" stroke-width="4" stroke-linecap="round"/>
+  <text x="256" y="371" text-anchor="middle" font-family="Arial, sans-serif" font-size="43" font-weight="700" letter-spacing="10" fill="#c9b5ff">GI</text>
+</svg>
