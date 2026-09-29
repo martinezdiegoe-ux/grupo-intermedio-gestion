@@ -7,7 +7,7 @@ export interface AppUser {
 }
 export interface YoungPerson {
   id:string; first_name:string; last_name:string; birth_date:string;
-  phone?:string; address?:string; photo_path?:string; group_name?:string; guardian_name?:string; guardian_phone?:string; active:boolean;
+  phone?:string; address?:string; photo_path?:string; group_name?:string; guardian_name?:string; guardian_phone?:string; guardian_email?:string; active:boolean;
   attendance_rate:number; sundays:number; rehearsals:number;
   traffic_light:TrafficLight; groups?:string[]
 }
@@ -21,7 +21,7 @@ export interface MedicalProfile {
 export interface EventItem {
   id:string; title:string;
   kind:'sunday'|'rehearsal'|'class'|'special'|'meeting'|'camp'|'other';
-  starts_at:string; location?:string; instructor?:string
+  starts_at:string; location?:string; description?:string; instructor?:string
 }
 export interface ProjectTask {
   id:string; title:string; assignee:string; assignee_id?:string; description?:string; due_date?:string;
