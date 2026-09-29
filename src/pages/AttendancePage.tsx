@@ -1,5 +1,6 @@
 import { useEffect,useMemo,useState } from 'react'
-import { ChevronDown,Search } from 'lucide-react'
+import { Search } from 'lucide-react'
+import AppSelect from '../components/AppSelect'
 import { getAttendance,listAttendanceEvents,localDate,saveAttendance } from '../services/attendance'
 import type { AttendanceEvent } from '../services/attendance'
 import { listYouth } from '../services/youth'
@@ -29,7 +30,7 @@ export default function AttendancePage(){
  return <><div className="page-title"><div><h1>Tomar asistencia</h1><span>{meetingLabel} · {formatDate(date)}</span></div><div className="pill">{present} / {attendees.length}</div></div>
  <div className="segmented"><button className={meeting==='sunday'?'active':''} onClick={()=>setMeeting('sunday')}>Domingo</button><button className={meeting==='rehearsal'?'active':''} onClick={()=>setMeeting('rehearsal')}>Sábado · Ensayo</button></div>
  <label className="field-label group-filter">Fecha de asistencia<input className="date-control" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
- <label className="field-label group-filter">Grupo<span className="select-wrap"><select value={group} onChange={e=>setGroup(e.target.value)}>{groups.map(name=><option key={name}>{name}</option>)}</select><ChevronDown size={20} aria-hidden="true"/></span></label>
+ <div className="field-label group-filter">Grupo<AppSelect label="Grupo de asistencia" value={group} onChange={setGroup} options={groups.map(name=>({value:name,label:name}))}/></div>
  {error&&<div className="error-box" role="alert">{error}</div>}
  <div className="search-box"><Search size={19}/><input placeholder="Buscar joven…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
  <div className="segmented"><button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Todos ({attendees.length})</button><button className={filter==='present'?'active':''} onClick={()=>setFilter('present')}>Presentes</button><button className={filter==='absent'?'active':''} onClick={()=>setFilter('absent')}>Ausentes</button></div>
