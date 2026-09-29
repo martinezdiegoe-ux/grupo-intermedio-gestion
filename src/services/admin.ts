@@ -10,10 +10,10 @@ export async function listAdminUsers():Promise<AdminUser[]>{
  if(error)throw error
  return data??[]
 }
-export async function saveUserPhone(id:string,phone:string){
- const {data,error}=await client().from('app_users').update({phone:phone.trim()||null}).eq('id',id).select('id').maybeSingle()
+export async function saveAdminUser(id:string,changes:{full_name:string;phone:string}){
+ const {data,error}=await client().from('app_users').update({full_name:changes.full_name.trim(),phone:changes.phone.trim()||null}).eq('id',id).select('id').maybeSingle()
  if(error)throw error
- if(!data)throw new Error('No se guardó el teléfono. Revisá los permisos.')
+ if(!data)throw new Error('No se guardaron los datos. Revisá los permisos.')
 }
 export async function sendNotice(userIds:string[],title:string,body:string){
  if(!userIds.length)throw new Error('No hay destinatarios activos.')
