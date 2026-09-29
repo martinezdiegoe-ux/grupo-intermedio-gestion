@@ -3,10 +3,14 @@ import { USE_MOCKS } from '../lib/config'
 import { demoYouth } from '../data/mock'
 import type { MedicalProfile,YoungPerson } from '../types/domain'
 export async function listYouth():Promise<YoungPerson[]>{
- if(USE_MOCKS||!supabase)return demoYouth
+ if(USE_MOCKS||!supabase)return demoYouth.filter(person=>person.active)
  const {data,error}=await supabase.from('young_people_view').select('*').eq('active',true).order('last_name')
  if(error)throw error
- return (data??[]) as YoungPerson[]
+ const people=(data??[]) as YoungPerson[]
+ const {data:photos,error:photoError}=await supabase.from('young_people').select('id,photo_path').eq('active',true)
+ if(photoError)throw photoError
+ const paths=new Map((photos??[]).map(person=>[person.id,person.photo_path]))
+ return people.map(person=>({...person,photo_path:paths.get(person.id)??null}))
 }
 export async function getYouth(id:string):Promise<YoungPerson|null>{
  if(USE_MOCKS||!supabase)return demoYouth.find(y=>y.id===id)??null
@@ -14,10 +18,10 @@ export async function getYouth(id:string):Promise<YoungPerson|null>{
  if(error)throw error
  const [{data:photo},{data:links}]=await Promise.all([
   supabase.from('young_people').select('photo_path').eq('id',id).maybeSingle(),
-  supabase.from('young_person_guardians').select('guardian_id,guardians(full_name,phone)').eq('young_person_id',id).order('is_emergency_contact',{ascending:false}).limit(1)
+  supabase.from('young_person_guardians').select('guardian_id,guardians(full_name,phone,email)').eq('young_person_id',id).order('is_emergency_contact',{ascending:false}).limit(1)
  ])
- const guardian=links?.[0]?.guardians as unknown as {full_name:string;phone:string|null}|undefined
- return {...data,photo_path:photo?.photo_path,guardian_name:guardian?.full_name,guardian_phone:guardian?.phone} as YoungPerson
+ const guardian=links?.[0]?.guardians as unknown as {full_name:string;phone:string|null;email:string|null}|undefined
+ return {...data,photo_path:photo?.photo_path,guardian_name:guardian?.full_name,guardian_phone:guardian?.phone,guardian_email:guardian?.email} as YoungPerson
 }
 export async function getYouthPhoto(path?:string):Promise<string|null>{
  if(!path||!supabase)return null
@@ -51,17 +55,29 @@ export async function updateYouth(id:string, changes:Partial<YoungPerson>):Promi
  if(error)throw new Error(`Datos personales: ${error.message}`)
  return data as YoungPerson
 }
+export async function archiveYouth(id:string):Promise<void>{
+ if(USE_MOCKS||!supabase){const person=demoYouth.find(y=>y.id===id);if(person)person.active=false;return}
+ const {data,error}=await supabase.from('young_people').update({active:false}).eq('id',id).select('id').maybeSingle()
+ if(error)throw error
+ if(!data)throw new Error('No se archivó el perfil. Revisá tus permisos.')
+}
 export async function listGroups():Promise<{id:string;name:string}[]>{
  if(USE_MOCKS||!supabase)return ['Elegidos','León de Judá','Guerreros de Gedeón','Valientes de David'].map(name=>({id:name,name}))
  const {data,error}=await supabase.from('groups').select('id,name').eq('active',true).order('name')
  if(error)throw error
  return data??[]
 }
-export async function createYouth(input:{first_name:string;last_name:string;birth_date:string;phone:string;group_id:string}):Promise<string>{
- if(USE_MOCKS||!supabase){const id=crypto.randomUUID();demoYouth.push({id,first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,phone:input.phone,group_name:input.group_id,active:true,attendance_rate:0,sundays:0,rehearsals:0,traffic_light:'green'});return id}
- const {data,error}=await supabase.from('young_people').insert({first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,phone:input.phone||null}).select('id').single()
+export interface YouthCreationInput {first_name:string;last_name:string;birth_date:string;phone:string;address:string;group_id:string;guardian_name:string;guardian_phone:string;guardian_email:string;guardian_relationship:string;guardian_address:string;medical:Partial<Omit<MedicalProfile,'young_person_id'>>;photo?:File}
+export async function createYouth(input:YouthCreationInput):Promise<string>{
+ if(USE_MOCKS||!supabase){const id=crypto.randomUUID();demoYouth.push({id,first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,phone:input.phone,address:input.address,guardian_name:input.guardian_name,guardian_phone:input.guardian_phone,guardian_email:input.guardian_email,group_name:input.group_id,active:true,attendance_rate:0,sundays:0,rehearsals:0,traffic_light:'green'});return id}
+ const {data,error}=await supabase.from('young_people').insert({first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,phone:input.phone||null,address:input.address||null}).select('id').single()
  if(error)throw error
- if(input.group_id){const {error:linkError}=await supabase.from('young_people_groups').insert({young_person_id:data.id,group_id:input.group_id});if(linkError)throw new Error(`El joven se creó, pero no se pudo asignar el grupo: ${linkError.message}`)}
+ try{
+  if(input.group_id){const {error:linkError}=await supabase.from('young_people_groups').insert({young_person_id:data.id,group_id:input.group_id});if(linkError)throw new Error('Grupo: '+linkError.message)}
+  if(input.guardian_name||input.guardian_phone||input.guardian_email){const {data:guardian,error:guardianError}=await supabase.from('guardians').insert({full_name:input.guardian_name||'Tutor',phone:input.guardian_phone||null,email:input.guardian_email||null,relationship:input.guardian_relationship||null,address:input.guardian_address||null}).select('id').single();if(guardianError)throw new Error('Tutor: '+guardianError.message);const {error:linkError}=await supabase.from('young_person_guardians').insert({young_person_id:data.id,guardian_id:guardian.id,is_emergency_contact:true});if(linkError)throw new Error('Vínculo del tutor: '+linkError.message)}
+  if(Object.values(input.medical).some(value=>!!value)){const {error:medicalError}=await supabase.from('medical_profiles').insert({young_person_id:data.id,...input.medical});if(medicalError)throw new Error('Ficha médica: '+medicalError.message)}
+  if(input.photo){const path=await uploadYouthPhoto(data.id,input.photo);const {error:photoError}=await supabase.from('young_people').update({photo_path:path}).eq('id',data.id);if(photoError)throw new Error('Foto: '+photoError.message)}
+ }catch(error){throw new Error('El perfil se creó con ID '+data.id+', pero faltó guardar un dato: '+(error instanceof Error?error.message:String(error))+'; abrí el perfil para completar la carga sin duplicarlo.')}
  return data.id
 }
 export async function updateGuardianPhone(id:string,name:string,phone:string):Promise<void>{

@@ -17,6 +17,17 @@ export async function getAttendance(eventId:string):Promise<Record<string,Attend
  if(error)throw error
  return Object.fromEntries((data??[]).map(row=>[row.young_person_id,row.status]))
 }
+export interface YouthAttendanceEntry {event:AttendanceEvent;status:AttendanceStatus|null}
+export async function listYouthAttendanceHistory(id:string):Promise<YouthAttendanceEntry[]>{
+ if(USE_MOCKS||!supabase)return []
+ const cutoff=new Date();cutoff.setDate(cutoff.getDate()-56)
+ const events=(await listAttendanceEvents()).filter(event=>new Date(event.starts_at)<=new Date()&&new Date(event.starts_at)>=cutoff).slice(0,16)
+ if(!events.length)return []
+ const {data,error}=await supabase.from('attendance').select('event_id,status').eq('young_person_id',id).in('event_id',events.map(event=>event.id))
+ if(error)throw error
+ const statuses=new Map((data??[]).map(row=>[row.event_id,row.status as AttendanceStatus]))
+ return events.reverse().map(event=>({event,status:statuses.get(event.id)??null}))
+}
 export async function listAttendanceSummary():Promise<{event:AttendanceEvent;rate:number;count:number}[]>{
  if(USE_MOCKS||!supabase)return []
  const events=(await listAttendanceEvents()).filter(e=>new Date(e.starts_at)<=new Date()).slice(0,6).reverse()
