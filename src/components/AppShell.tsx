@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
-import { Bell,CalendarDays,ClipboardCheck,FolderKanban,Home,Settings,Users } from 'lucide-react'
+import { Bell,CalendarDays,ClipboardCheck,FolderKanban,Home,Settings,Users,Wallet } from 'lucide-react'
 import { NavLink,useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthContext'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import InstallAppButton from './InstallAppButton'
-const nav=[['/',Home,'Inicio'],['/asistencia',ClipboardCheck,'Asistencia'],['/jovenes',Users,'Jóvenes'],['/cronograma',CalendarDays,'Cronograma'],['/proyectos',FolderKanban,'Proyectos']] as const
+const nav=[['/',Home,'Inicio'],['/asistencia',ClipboardCheck,'Asistencia'],['/jovenes',Users,'Jóvenes'],['/cronograma',CalendarDays,'Cronograma'],['/proyectos',FolderKanban,'Proyectos'],['/presupuesto',Wallet,'Presupuesto']] as const
 export default function AppShell({children}:{children:ReactNode}){
  const {user,signOut}=useAuth();const online=useOnlineStatus();const go=useNavigate()
  return <div className="app-frame">
