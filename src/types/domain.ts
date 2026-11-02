@@ -1,9 +1,9 @@
-export type Role='superadmin'|'admin'|'leader'|'instructor'
+export type Role='superadmin'|'admin'|'leader'|'instructor'|'collaborator'
 export type TrafficLight='green'|'yellow'|'red'
 export type AttendanceStatus='present'|'absent'|'justified'|'not_applicable'
 
 export interface AppUser {
-  id:string; email:string; full_name:string; role:Role; permissions:string[]
+  id:string; email:string; full_name:string; role:Role; permissions:string[]; active?:boolean
 }
 export interface YoungPerson {
   id:string; first_name:string; last_name:string; birth_date:string;
@@ -35,3 +35,4 @@ export interface AlertItem {
   id:string; young_person_id:string; young_person_name:string;
   level:TrafficLight; reason:string; created_at:string; resolved:boolean
 }
+

@@ -10,7 +10,7 @@ export async function listStaff():Promise<StaffMember[]>{
  if(error)throw error
  return data??[]
 }
-export async function listProjects():Promise<Project[]>{
+export async function listProjects(limited=false):Promise<Project[]>{
  if(USE_MOCKS||!supabase)return demoProjects
  const {data,error}=await supabase.from('projects').select('id,name,description,start_date,end_date,status,owner_user_id,created_at').order('created_at',{ascending:false})
  if(error)throw error
@@ -21,14 +21,16 @@ export async function listProjects():Promise<Project[]>{
  if(taskError)throw taskError
  const userIds=[...new Set(projects.map(p=>p.owner_user_id).filter((id):id is string=>Boolean(id)))]
  const taskIds=(tasks??[]).map(t=>t.id)
+ const {data:directory,error:directoryError}=limited?await supabase.rpc('collaborator_project_people'):{data:[],error:null}
+ if(directoryError)throw directoryError
  const [{data:users,error:userError},{data:links,error:linkError}]=await Promise.all([
-  userIds.length?supabase.from('app_users').select('id,full_name').in('id',userIds):Promise.resolve({data:[],error:null}),
+  limited?Promise.resolve({data:directory??[],error:null}):userIds.length?supabase.from('app_users').select('id,full_name').in('id',userIds):Promise.resolve({data:[],error:null}),
   taskIds.length?supabase.from('task_assignees').select('task_id,user_id').in('task_id',taskIds):Promise.resolve({data:[],error:null})
  ])
  if(userError)throw userError
  if(linkError)throw linkError
  const assigneeIds=[...new Set((links??[]).map(a=>a.user_id))]
- const {data:assignees,error:assigneeError}=assigneeIds.length?await supabase.from('app_users').select('id,full_name').in('id',assigneeIds):{data:[],error:null}
+ const {data:assignees,error:assigneeError}=limited?{data:directory??[],error:null}:assigneeIds.length?await supabase.from('app_users').select('id,full_name').in('id',assigneeIds):{data:[],error:null}
  if(assigneeError)throw assigneeError
  const names=new Map([...(users??[]),...(assignees??[])].map(u=>[u.id,u.full_name]))
  return projects.map(p=>{
@@ -88,3 +90,4 @@ export async function deleteProject(projectId:string):Promise<void>{
  if(error)throw error
  if(!data)throw new Error('No se eliminó el proyecto. Revisá los permisos de tu cuenta.')
 }
+

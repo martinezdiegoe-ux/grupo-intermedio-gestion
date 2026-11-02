@@ -19,10 +19,10 @@ export function AuthProvider({children}:{children:ReactNode}){
     const load=async(au:{id:string}|undefined)=>{
       const current=++requestId.current
       if(!au){setUser(null);setLoading(false);return}
-      const {data:profile,error}=await client.from('app_users').select('id,email,full_name,role,permissions').eq('id',au.id).single()
+      const {data:profile,error}=await client.from('app_users').select('id,email,full_name,role,permissions,active').eq('id',au.id).single()
       if(!active||current!==requestId.current)return
       if(error)console.error('No se pudo cargar el perfil de acceso:',error.message)
-      setUser(profile as AppUser|null);setLoading(false)
+      setUser(profile?.active ? profile as AppUser : null);setLoading(false)
     }
     const {data:l}=client.auth.onAuthStateChange((_event,session)=>{
       setTimeout(()=>{if(active)void load(session?.user)},0)
@@ -35,8 +35,8 @@ export function AuthProvider({children}:{children:ReactNode}){
       if(!supabase)throw new Error('Supabase no está configurado.')
       const {data,error}=await supabase.auth.signInWithPassword({email,password});if(error)throw error
       if(!data.user)throw new Error('No se pudo confirmar la sesión. Intentá nuevamente.')
-      const {data:profile,error:profileError}=await supabase.from('app_users').select('id,email,full_name,role,permissions').eq('id',data.user.id).single()
-      if(profileError||!profile)throw new Error('La cuenta ingresó, pero no se pudo cargar su perfil. Revisá los permisos de la cuenta.')
+      const {data:profile,error:profileError}=await supabase.from('app_users').select('id,email,full_name,role,permissions,active').eq('id',data.user.id).single()
+      if(profileError||!profile||!profile.active)throw new Error('La cuenta ingresó, pero no se pudo cargar su perfil. Revisá los permisos de la cuenta.')
       setUser(profile as AppUser)
     },
     async signOut(){if(!USE_MOCKS&&supabase)await supabase.auth.signOut();setUser(null)}
@@ -44,3 +44,4 @@ export function AuthProvider({children}:{children:ReactNode}){
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 export function useAuth(){const c=useContext(AuthContext);if(!c)throw new Error('AuthProvider faltante');return c}
+

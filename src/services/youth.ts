@@ -88,3 +88,13 @@ export async function updateGuardianPhone(id:string,name:string,phone:string):Pr
  if(guardianId){const {error:updateError}=await supabase.from('guardians').update({full_name:name,phone}).eq('id',guardianId);if(updateError)throw new Error(`Tutor: ${updateError.message}`)}
  else if(name||phone){const {data:guardian,error:createError}=await supabase.from('guardians').insert({full_name:name||'Tutor',phone}).select('id').single();if(createError)throw new Error(`Tutor: ${createError.message}`);const {error:linkError}=await supabase.from('young_person_guardians').insert({young_person_id:id,guardian_id:guardian.id,is_emergency_contact:true});if(linkError)throw new Error(`Vínculo con tutor: ${linkError.message}`)}
 }
+
+
+export type AttendancePerson = Pick<YoungPerson,'id'|'first_name'|'last_name'|'group_name'>
+export async function listAttendanceRoster(limited=false):Promise<AttendancePerson[]>{
+ if(!limited)return listYouth()
+ if(USE_MOCKS||!supabase)return demoYouth.filter(person=>person.active).map(({id,first_name,last_name,group_name})=>({id,first_name,last_name,group_name}))
+ const {data,error}=await supabase.rpc('collaborator_attendance_roster')
+ if(error)throw error
+ return data??[]
+}
