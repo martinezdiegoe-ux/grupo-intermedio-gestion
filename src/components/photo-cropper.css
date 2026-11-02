@@ -1,0 +1,12 @@
+.photo-cropper{width:100%;min-width:0;padding:16px;border:1px solid #544477;border-radius:18px;background:#111225;color:#e4d9ff}
+.photo-cropper>strong{display:block}.photo-cropper p{font-size:.88rem;line-height:1.5;margin:8px 0 16px;color:#bcb4d2}
+.photo-crop-viewport{position:relative;width:min(100%,256px);aspect-ratio:1;margin:0 auto 18px;border-radius:50%;overflow:hidden;background:#24203d;box-shadow:0 0 0 2px #a17aff;touch-action:none;cursor:grab;user-select:none;display:grid;place-items:center}
+.photo-crop-viewport:active{cursor:grabbing}.photo-crop-viewport img{position:absolute;display:block;max-width:none;max-height:none;object-fit:fill;pointer-events:none;user-select:none}
+.photo-cropper label{display:block;font-size:.88rem;margin:12px 0}.photo-cropper .photo-crop-zoom{float:right}
+.form-grid .photo-cropper input[type="range"]{display:block;width:100%;height:32px;padding:0;margin:4px 0;background:transparent;border:0;accent-color:#a17aff}
+.photo-cropper input:disabled{opacity:.45}.photo-crop-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 10px}
+.photo-crop-actions .secondary-btn,.photo-crop-actions .small-primary{padding:10px 12px;border-radius:12px}.photo-crop-actions button:disabled{opacity:.5;cursor:default}
+.photo-field-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* Explicit image bounds prevent portrait photos from stretching grid tracks. */
+.profile-avatar{position:relative;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);flex-shrink:0}
+.profile-avatar img,.avatar img{display:block;width:100%;height:100%;min-width:0;min-height:0;object-fit:cover;object-position:center;aspect-ratio:1}
