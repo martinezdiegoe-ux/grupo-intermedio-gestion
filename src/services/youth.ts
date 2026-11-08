@@ -90,11 +90,15 @@ export async function updateGuardianPhone(id:string,name:string,phone:string):Pr
 }
 
 
-export type AttendancePerson = Pick<YoungPerson,'id'|'first_name'|'last_name'|'group_name'>
+export type AttendancePerson = Pick<YoungPerson,'id'|'first_name'|'last_name'|'group_name'|'photo_path'>
 export async function listAttendanceRoster(limited=false):Promise<AttendancePerson[]>{
  if(!limited)return listYouth()
- if(USE_MOCKS||!supabase)return demoYouth.filter(person=>person.active).map(({id,first_name,last_name,group_name})=>({id,first_name,last_name,group_name}))
+ if(USE_MOCKS||!supabase)return demoYouth.filter(person=>person.active).map(({id,first_name,last_name,group_name,photo_path})=>({id,first_name,last_name,group_name,photo_path}))
  const {data,error}=await supabase.rpc('collaborator_attendance_roster')
  if(error)throw error
- return data??[]
+ const {data:photos,error:photoError}=await supabase.rpc('collaborator_attendance_photos')
+ // A photo outage must not prevent taking attendance.
+ if(photoError)return data??[]
+ const paths=new Map((photos??[]).map((photo:{id:string;photo_path:string})=>[photo.id,photo.photo_path]))
+ return (data??[]).map((person:AttendancePerson)=>({...person,photo_path:paths.get(person.id)}))
 }

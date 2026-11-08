@@ -1,6 +1,7 @@
 import { useEffect,useMemo,useState } from 'react'
 import { Search } from 'lucide-react'
 import AppSelect from '../components/AppSelect'
+import YouthAvatar from '../components/YouthAvatar'
 import { getAttendance,listAttendanceEvents,localDate,saveAttendance } from '../services/attendance'
 import type { AttendanceEvent } from '../services/attendance'
 import { listAttendanceRoster } from '../services/youth'
@@ -39,7 +40,7 @@ export default function AttendancePage(){
  {error&&<div className="error-box" role="alert">{error}</div>}{limited&&!event&&<div className="empty-card">No hay un encuentro de este tipo cargado para esta fecha. Pedile a un instructor que lo agregue al cronograma.</div>}
  <div className="search-box"><Search size={19}/><input placeholder="Buscar joven…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
  <div className="segmented"><button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Todos ({attendees.length})</button><button className={filter==='present'?'active':''} onClick={()=>setFilter('present')}>Presentes</button><button className={filter==='absent'?'active':''} onClick={()=>setFilter('absent')}>Ausentes</button></div>
- <div className="list-stack">{visible.map(y=><div className="person-row" key={y.id}><div className="avatar">{y.first_name[0]}{y.last_name[0]}</div><div className="grow"><strong>{y.first_name} {y.last_name}</strong><small>{y.group_name??'Sin grupo asignado'}</small></div><button aria-label={`Cambiar asistencia de ${y.first_name} ${y.last_name}`} className={`toggle ${status[y.id]==='present'?'on':''}`} onClick={()=>setStatus(s=>({...s,[y.id]:s[y.id]==='present'?'absent':'present'}))}><span/></button></div>)}</div>
+ <div className="list-stack">{visible.map(y=><div className="person-row" key={y.id}><YouthAvatar firstName={y.first_name} lastName={y.last_name} photoPath={y.photo_path}/><div className="grow"><strong>{y.first_name} {y.last_name}</strong><small>{y.group_name??'Sin grupo asignado'}</small></div><button aria-label={`Cambiar asistencia de ${y.first_name} ${y.last_name}`} className={`toggle ${status[y.id]==='present'?'on':''}`} onClick={()=>setStatus(s=>({...s,[y.id]:s[y.id]==='present'?'absent':'present'}))}><span/></button></div>)}</div>
  <button className="primary-btn sticky-action" disabled={saving||!date||!attendees.length||(limited&&!event)} onClick={save}>{saving?'Guardando…':'Guardar asistencia'}</button>{notice&&<div className="success-box" role="status">{notice}</div>}</>
 }
 

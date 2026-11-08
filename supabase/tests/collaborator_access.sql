@@ -21,7 +21,7 @@ do $$declare n int; t text; begin
   begin execute format('select count(*) from public.%I',t) into n; if n<>0 then raise exception 'Private rows accessible: %',t; end if; exception when insufficient_privilege then null; end;
  end loop;
  if (select count(*) from public.app_users)<>1 then raise exception 'User directory exposed'; end if;
- if exists(select 1 from storage.objects) then raise exception 'Storage exposed'; end if;
+ if exists(select 1 from storage.objects o where o.bucket_id<>'young-photos' or not exists(select 1 from public.collaborator_attendance_photos() p where p.photo_path=o.name)) then raise exception 'Private storage exposed'; end if;
  if not exists(select 1 from public.projects where id=current_setting('gi.test_project')::uuid) then raise exception 'Cannot read projects'; end if;
  if not exists(select 1 from public.events where id=current_setting('gi.test_event')::uuid) then raise exception 'Cannot read calendar'; end if;
  insert into public.attendance(event_id,young_person_id,status,recorded_by) values(current_setting('gi.test_event')::uuid,current_setting('gi.test_youth')::uuid,'present',auth.uid());
