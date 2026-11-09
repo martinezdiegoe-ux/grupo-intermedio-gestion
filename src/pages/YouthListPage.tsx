@@ -1,10 +1,11 @@
 import { useEffect,useMemo,useState } from 'react'
-import { Search } from 'lucide-react'
+import { GraduationCap, Search } from 'lucide-react'
 import AppSelect from '../components/AppSelect'
 import { matchesYouthSex, YouthSexFilter, youthSexFilters } from '../components/YouthSexControls'
 import { useNavigate,useSearchParams } from 'react-router-dom'
 import TrafficLightDot from '../components/TrafficLight'
 import { getYouthPhoto,listYouth } from '../services/youth'
+import { currentGraduationYear, isGraduatingInYear } from '../lib/graduation'
 import type { YoungPerson } from '../types/domain'
 function age(s:string){const d=new Date(s),n=new Date();let a=n.getFullYear()-d.getFullYear();if(n<new Date(n.getFullYear(),d.getMonth(),d.getDate()))a--;return a}
 export default function YouthListPage(){
@@ -13,7 +14,17 @@ export default function YouthListPage(){
  const light=params.get('semaforo'),filter=['green','yellow','red'].includes(light??'')?light:null
  const group=params.get('grupo')??'',groups=useMemo(()=>[...new Set(items.map(y=>y.group_name??''))].sort((a,b)=>a.localeCompare(b,'es')),[items])
  const sexFilter=youthSexFilters.find(option=>option.value===params.get('sexo'))?.value??'all'
- const visible=useMemo(()=>items.filter(y=>matchesYouthSex(y.sex,sexFilter)&&(!filter||y.traffic_light===filter)&&(!group||(y.group_name??'__none__')===group)&&`${y.first_name} ${y.last_name}`.toLowerCase().includes(q.toLowerCase())),[items,q,filter,group,sexFilter])
+ const graduationYear=currentGraduationYear()
+ const onlyGraduating=params.get('egreso')==='este-ano'
+ const visible=useMemo(()=>items.filter(y=>(!onlyGraduating||isGraduatingInYear(y.birth_date,graduationYear))&&matchesYouthSex(y.sex,sexFilter)&&(!filter||y.traffic_light===filter)&&(!group||(y.group_name??'__none__')===group)&&`${y.first_name} ${y.last_name}`.toLowerCase().includes(q.toLowerCase())),[items,q,filter,group,sexFilter,onlyGraduating,graduationYear])
  function choose(key:string,value:string){const next=new URLSearchParams(params);if(value)next.set(key,value);else next.delete(key);setParams(next)}
- return <><div className="page-title"><div><h1>Jóvenes</h1><span>{visible.length} de {items.length} activos</span></div></div>{loadError&&<div className="error-box" role="alert">{loadError}</div>}<div className="segmented">{[['','Todos'],['green','Regular'],['yellow','Seguimiento'],['red','Contactar']].map(([value,label])=><button key={value} className={(filter??'')===value?'active':''} onClick={()=>choose('semaforo',value)}>{label}</button>)}</div><div className="group-filter">Grupo<AppSelect label="Grupo" value={group} onChange={value=>choose('grupo',value)} options={[{value:'',label:'Todos los grupos'},...groups.map(name=>({value:name||'__none__',label:name||'Sin grupo asignado'}))]}/></div><YouthSexFilter value={sexFilter} onChange={value=>choose('sexo',value==='all'?'':value)}/><div className="search-box"><Search size={19}/><input placeholder="Buscar…" value={q} onChange={e=>setQ(e.target.value)}/></div><div className="list-stack">{visible.map(y=><button className="person-row clickable" key={y.id} onClick={()=>nav(`/jovenes/${y.id}`)}><div className="avatar">{photos[y.id]?<img src={photos[y.id]} alt="" loading="lazy"/>:<>{y.first_name[0]}{y.last_name[0]}</>}</div><div className="grow"><strong>{y.first_name} {y.last_name}</strong><small>{age(y.birth_date)} años · {y.group_name??'Sin grupo asignado'}</small></div><TrafficLightDot value={y.traffic_light}/></button>)}</div>{!loadError&&!visible.length&&<div className="empty-card">No hay jóvenes en esta selección.</div>}</>
+ return <><div className="page-title"><div><h1>Jóvenes</h1><span>{visible.length} de {items.length} activos</span></div></div>{loadError&&<div className="error-box" role="alert">{loadError}</div>}<div className="segmented">{[['','Todos'],['green','Regular'],['yellow','Seguimiento'],['red','Contactar']].map(([value,label])=><button key={value} className={(filter??'')===value?'active':''} onClick={()=>choose('semaforo',value)}>{label}</button>)}</div><div className="group-filter">Grupo<AppSelect label="Grupo" value={group} onChange={value=>choose('grupo',value)} options={[{value:'',label:'Todos los grupos'},...groups.map(name=>({value:name||'__none__',label:name||'Sin grupo asignado'}))]}/></div><YouthSexFilter value={sexFilter} onChange={value=>choose('sexo',value==='all'?'':value)}/>
+ <div className="segmented graduation-filter">
+  <button type="button" className={onlyGraduating?'active':''} aria-pressed={onlyGraduating}
+   onClick={()=>choose('egreso',onlyGraduating?'':'este-ano')}>
+   <GraduationCap size={17} aria-hidden="true"/> Egresan este año
+  </button>
+  {onlyGraduating&&<small>Cumplen 18 en {graduationYear}.</small>}
+ </div>
+ <div className="search-box"><Search size={19}/><input placeholder="Buscar…" value={q} onChange={e=>setQ(e.target.value)}/></div><div className="list-stack">{visible.map(y=><button className="person-row clickable" key={y.id} onClick={()=>nav(`/jovenes/${y.id}`)}><div className="avatar">{photos[y.id]?<img src={photos[y.id]} alt="" loading="lazy"/>:<>{y.first_name[0]}{y.last_name[0]}</>}</div><div className="grow"><strong>{y.first_name} {y.last_name}</strong><small>{age(y.birth_date)} años · {y.group_name??'Sin grupo asignado'}</small></div><TrafficLightDot value={y.traffic_light}/></button>)}</div>{!loadError&&!visible.length&&<div className="empty-card">No hay jóvenes en esta selección.</div>}</>
 }

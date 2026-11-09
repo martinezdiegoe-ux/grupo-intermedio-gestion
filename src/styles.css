@@ -36,3 +36,24 @@
   padding: 8px 4px;
   white-space: normal;
 }
+
+.graduation-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #45436e;
+  border-radius: 18px;
+  background: #191a31;
+  color: #f7f7fb;
+  text-decoration: none;
+}
+.graduation-card > div { flex: 1; min-width: 0; }
+.graduation-card > svg { flex-shrink: 0; color: #b399ff; }
+.graduation-card small { display: block; margin-top: 4px; color: #aaa4c9; }
+.graduation-card:hover { border-color: #a585ff; }
+.graduation-card:focus-visible { outline: 2px solid #b399ff; outline-offset: 2px; }
+.graduation-filter { align-items: center; flex-wrap: wrap; gap: 8px; }
+.graduation-filter button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.graduation-filter small { color: #aaa4c9; }
