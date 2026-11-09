@@ -55,3 +55,12 @@
 .inventory-movement-heading time, .inventory-movement-actor { color: #aaa4c9; font-size: .85rem; }
 .inventory-movement-actor { margin: 4px 0 0; }
 .inventory-movement-values { margin: 8px 0 0; }
+
+@media (max-width: 520px) {
+  .inventory-page .segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .inventory-page .segmented button { padding: 10px 4px; font-size: .85rem; }
+}
