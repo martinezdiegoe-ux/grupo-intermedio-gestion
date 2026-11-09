@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { getYouthPhoto } from '../services/youth'
 
-export default function YouthAvatar({firstName,lastName,photoPath}:{firstName:string;lastName:string;photoPath?:string}){
+export default function YouthAvatar({firstName,lastName,photoPath,onPreview}:{
+ firstName:string;lastName:string;photoPath?:string;onPreview?:(url:string)=>void
+}){
  const [photo,setPhoto]=useState<{path:string;url:string}|null>(null)
  useEffect(()=>{
   let active=true
@@ -18,5 +20,10 @@ export default function YouthAvatar({firstName,lastName,photoPath}:{firstName:st
   return()=>{active=false;window.clearInterval(timer)}
  },[photoPath])
  const url=photo&&photo.path===photoPath?photo.url:null
- return <div className="avatar">{url?<img src={url} alt="" loading="lazy" onError={()=>setPhoto(null)}/>:<>{firstName[0]}{lastName[0]}</>}</div>
+ if (!url) return <div className="avatar">{firstName[0]}{lastName[0]}</div>
+ const image = <img src={url} alt="" loading="lazy" onError={()=>setPhoto(null)}/>
+ if (!onPreview) return <div className="avatar">{image}</div>
+ return <button type="button" className="avatar attendance-photo-trigger"
+  aria-label={`Ampliar foto de ${firstName} ${lastName}`} aria-haspopup="dialog"
+  onClick={()=>onPreview(url)}>{image}</button>
 }
