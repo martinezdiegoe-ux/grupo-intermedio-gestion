@@ -1,12 +1,14 @@
 export type Role='superadmin'|'admin'|'leader'|'instructor'|'collaborator'
 export type TrafficLight='green'|'yellow'|'red'
 export type AttendanceStatus='present'|'absent'|'justified'|'not_applicable'
+export type YouthSex='male'|'female'
 
 export interface AppUser {
   id:string; email:string; full_name:string; role:Role; permissions:string[]; active?:boolean
 }
 export interface YoungPerson {
   id:string; first_name:string; last_name:string; birth_date:string;
+  sex?:YouthSex|null;
   phone?:string; address?:string; photo_path?:string; group_name?:string; guardian_name?:string; guardian_phone?:string; guardian_email?:string; active:boolean;
   attendance_rate:number; sundays:number; rehearsals:number;
   traffic_light:TrafficLight; groups?:string[]

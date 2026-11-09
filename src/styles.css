@@ -23,3 +23,16 @@
 
 .push-activate{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0}.push-activate:disabled{opacity:.65}@media(max-width:640px){.push-activate{max-width:52%;font-size:.78rem;padding:9px 10px;white-space:normal;text-align:center}}
 .avatar{flex-shrink:0;overflow:hidden}.avatar img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:50%}
+
+.youth-sex-label { display: block; color: #aaa4c9; font-weight: 600; }
+.youth-sex-filter {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+.youth-sex-filter button {
+  min-height: 44px;
+  padding: 8px 4px;
+  white-space: normal;
+}

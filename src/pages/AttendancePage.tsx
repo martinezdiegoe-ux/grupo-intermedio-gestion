@@ -3,6 +3,8 @@ import { Search } from 'lucide-react'
 import { useNavigate,useOutlet } from 'react-router-dom'
 import AppSelect from '../components/AppSelect'
 import AttendancePhotoDialog from '../components/AttendancePhotoDialog'
+import { matchesYouthSex, YouthSexFilter, youthSexFilters } from '../components/YouthSexControls'
+import type { YouthSexFilterValue } from '../components/YouthSexControls'
 import YouthAvatar from '../components/YouthAvatar'
 import { getAttendance,listAttendanceEvents,localDate,saveAttendance } from '../services/attendance'
 import type { AttendanceEvent } from '../services/attendance'
@@ -33,6 +35,7 @@ export default function AttendancePage(){
  const [youth,setYouth]=useState<AttendancePerson[]>([]),[events,setEvents]=useState<AttendanceEvent[]>([])
  const [date,setDate]=useState(localDate(new Date().toISOString())),[meeting,setMeeting]=useState<'sunday'|'rehearsal'>('sunday')
  const [status,setStatus]=useState<Record<string,AttendanceStatus>>({}),[query,setQuery]=useState(''),[group,setGroup]=useState('Todos')
+ const [sexFilter,setSexFilter]=useState<YouthSexFilterValue>('all')
  const [filter,setFilter]=useState<'all'|'present'|'absent'>('all'),[error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false)
  useEffect(()=>{
   if(profileOpen)return
@@ -50,9 +53,16 @@ export default function AttendancePage(){
   }
  },[profileOpen])
  const event=events.find(e=>e.kind===meeting&&localDate(e.starts_at)===date)
- useEffect(()=>{let active=true;setStatus({});setNotice('');if(event)getAttendance(event.id).then(rows=>{if(active)setStatus(rows)}).catch(e=>{if(active)setError(`No se pudo consultar la asistencia: ${e.message}`)});return()=>{active=false}},[event?.id,date,meeting])
+ useEffect(()=>{setStatus({});setNotice('')},[date,meeting])
+ useEffect(()=>{
+  let active=true
+  if(event)getAttendance(event.id).then(rows=>{
+   if(active)setStatus(current=>({...rows,...current}))
+  }).catch(e=>{if(active)setError(`No se pudo consultar la asistencia: ${e.message}`)})
+  return()=>{active=false}
+ },[event?.id,date,meeting])
  const groups=['Todos',...new Set(youth.map(y=>y.group_name).filter((name):name is string=>Boolean(name)))]
- const attendees=youth.filter(y=>group==='Todos'||y.group_name===group)
+ const attendees=useMemo(()=>youth.filter(y=>(group==='Todos'||y.group_name===group)&&matchesYouthSex(y.sex,sexFilter)),[youth,group,sexFilter])
  const visible=useMemo(()=>{
   const search=query.trim().toLocaleLowerCase('es-AR')
   return attendees.filter(person=>[`${person.first_name} ${person.last_name}`,`${person.last_name} ${person.first_name}`,attendanceName(person)]
@@ -65,9 +75,12 @@ export default function AttendancePage(){
   if(limited&&!event)throw new Error('Elegí una fecha con un encuentro ya cargado. Un instructor puede agregarlo al cronograma.');
   if(!navigator.onLine)throw new Error('Necesitás conexión para guardar la asistencia.')
   const entries=Object.fromEntries(attendees.map(y=>[y.id,status[y.id]??'absent'])) as Record<string,AttendanceStatus>
-  if(!attendees.length)throw new Error('No hay jóvenes en el grupo seleccionado.')
+  if(!attendees.length)throw new Error('No hay jóvenes para esta selección.')
   const savedEvent=await saveAttendance(date,meeting,event,entries)
-  if(!event)setEvents(list=>[savedEvent,...list]);setStatus(previous=>({...previous,...entries}));setNotice(`Asistencia guardada: ${formatDate(date)} · ${group}.`)
+  if(!event)setEvents(list=>[savedEvent,...list])
+  setStatus(previous=>({...previous,...entries}))
+  const sexLabel=youthSexFilters.find(option=>option.value===sexFilter)?.label
+  setNotice(`Asistencia guardada: ${formatDate(date)} · ${group}${sexFilter==='all'?'':` · ${sexLabel}`}.`)
  }catch(e){setError(e instanceof Error?e.message:'No se pudo guardar la asistencia.')}finally{setSaving(false)}}
  const meetingLabel=meeting==='sunday'?'Domingo · Grupo Intermedio':'Sábado · Ensayo del Coro Intermedio'
  const formatDate=(day:string)=>day.slice(8,10)+'/'+day.slice(5,7)
@@ -81,10 +94,12 @@ export default function AttendancePage(){
  <div className="segmented"><button className={meeting==='sunday'?'active':''} onClick={()=>setMeeting('sunday')}>Domingo</button><button className={meeting==='rehearsal'?'active':''} onClick={()=>setMeeting('rehearsal')}>Sábado · Ensayo</button></div>
  <label className="field-label group-filter">Fecha de asistencia<input className="date-control" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
  <div className="field-label group-filter">Grupo<AppSelect label="Grupo de asistencia" value={group} onChange={setGroup} options={groups.map(name=>({value:name,label:name}))}/></div>
+ <YouthSexFilter value={sexFilter} onChange={setSexFilter}/>
  {error&&<div className="error-box" role="alert">{error}</div>}{limited&&!event&&<div className="empty-card">No hay un encuentro de este tipo cargado para esta fecha. Pedile a un instructor que lo agregue al cronograma.</div>}
  <div className="search-box"><Search size={19}/><input placeholder="Buscar joven…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
  <div className="segmented"><button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Todos ({attendees.length})</button><button className={filter==='present'?'active':''} onClick={()=>setFilter('present')}>Presentes</button><button className={filter==='absent'?'active':''} onClick={()=>setFilter('absent')}>Ausentes</button></div>
  <div className="list-stack">{visible.map(y=><div className="person-row" key={y.id}><YouthAvatar firstName={y.first_name} lastName={y.last_name} photoPath={y.photo_path} onPreview={url=>setPreview({person:y,url})}/><div className="grow"><strong>{attendanceName(y)}</strong><small>{y.group_name??'Sin grupo asignado'}</small></div><button aria-label={`Cambiar asistencia de ${y.first_name} ${y.last_name}`} className={`toggle ${status[y.id]==='present'?'on':''}`} onClick={()=>setStatus(s=>({...s,[y.id]:s[y.id]==='present'?'absent':'present'}))}><span/></button></div>)}</div>
+ {youth.length>0&&!visible.length&&<div className="empty-card">No hay jóvenes para esta selección.</div>}
  <button className="primary-btn sticky-action" disabled={saving||!date||!attendees.length||(limited&&!event)} onClick={save}>{saving?'Guardando…':'Guardar asistencia'}</button>{notice&&<div className="success-box" role="status">{notice}</div>}
  </div>
  {profile}

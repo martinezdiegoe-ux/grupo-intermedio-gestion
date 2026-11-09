@@ -1,27 +1,27 @@
 import { supabase } from '../lib/supabase'
 import { USE_MOCKS } from '../lib/config'
 import { demoYouth } from '../data/mock'
-import type { MedicalProfile,YoungPerson } from '../types/domain'
+import type { MedicalProfile,YoungPerson,YouthSex } from '../types/domain'
 export async function listYouth():Promise<YoungPerson[]>{
  if(USE_MOCKS||!supabase)return demoYouth.filter(person=>person.active)
  const {data,error}=await supabase.from('young_people_view').select('*').eq('active',true).order('last_name')
  if(error)throw error
  const people=(data??[]) as YoungPerson[]
- const {data:photos,error:photoError}=await supabase.from('young_people').select('id,photo_path').eq('active',true)
- if(photoError)throw photoError
- const paths=new Map((photos??[]).map(person=>[person.id,person.photo_path]))
- return people.map(person=>({...person,photo_path:paths.get(person.id)??null}))
+ const {data:details,error:detailError}=await supabase.from('young_people').select('id,photo_path,sex').eq('active',true)
+ if(detailError)throw detailError
+ const byId=new Map((details??[]).map(person=>[person.id,person]))
+ return people.map(person=>({...person,photo_path:byId.get(person.id)?.photo_path??null,sex:byId.get(person.id)?.sex??null}))
 }
 export async function getYouth(id:string):Promise<YoungPerson|null>{
  if(USE_MOCKS||!supabase)return demoYouth.find(y=>y.id===id)??null
  const {data,error}=await supabase.from('young_people_view').select('*').eq('id',id).single()
  if(error)throw error
- const [{data:photo},{data:links}]=await Promise.all([
-  supabase.from('young_people').select('photo_path').eq('id',id).maybeSingle(),
+ const [{data:details},{data:links}]=await Promise.all([
+  supabase.from('young_people').select('photo_path,sex').eq('id',id).maybeSingle(),
   supabase.from('young_person_guardians').select('guardian_id,guardians(full_name,phone,email)').eq('young_person_id',id).order('is_emergency_contact',{ascending:false}).limit(1)
  ])
  const guardian=links?.[0]?.guardians as unknown as {full_name:string;phone:string|null;email:string|null}|undefined
- return {...data,photo_path:photo?.photo_path,guardian_name:guardian?.full_name,guardian_phone:guardian?.phone,guardian_email:guardian?.email} as YoungPerson
+ return {...data,photo_path:details?.photo_path,sex:details?.sex??null,guardian_name:guardian?.full_name,guardian_phone:guardian?.phone,guardian_email:guardian?.email} as YoungPerson
 }
 export async function getYouthPhoto(path?:string):Promise<string|null>{
  if(!path||!supabase)return null
@@ -50,7 +50,7 @@ export async function updateYouth(id:string, changes:Partial<YoungPerson>):Promi
   demoYouth[index]={...demoYouth[index],...changes}
   return demoYouth[index]
  }
- const payload={first_name:changes.first_name,last_name:changes.last_name,birth_date:changes.birth_date,phone:changes.phone,address:changes.address,photo_path:changes.photo_path}
+ const payload={first_name:changes.first_name,last_name:changes.last_name,birth_date:changes.birth_date,sex:changes.sex,phone:changes.phone,address:changes.address,photo_path:changes.photo_path}
  const {data,error}=await supabase.from('young_people').update(payload).eq('id',id).select().single()
  if(error)throw new Error(`Datos personales: ${error.message}`)
  return data as YoungPerson
@@ -67,10 +67,10 @@ export async function listGroups():Promise<{id:string;name:string}[]>{
  if(error)throw error
  return data??[]
 }
-export interface YouthCreationInput {first_name:string;last_name:string;birth_date:string;phone:string;address:string;group_id:string;guardian_name:string;guardian_phone:string;guardian_email:string;guardian_relationship:string;guardian_address:string;medical:Partial<Omit<MedicalProfile,'young_person_id'>>;photo?:File}
+export interface YouthCreationInput {first_name:string;last_name:string;birth_date:string;sex:YouthSex|null;phone:string;address:string;group_id:string;guardian_name:string;guardian_phone:string;guardian_email:string;guardian_relationship:string;guardian_address:string;medical:Partial<Omit<MedicalProfile,'young_person_id'>>;photo?:File}
 export async function createYouth(input:YouthCreationInput):Promise<string>{
- if(USE_MOCKS||!supabase){const id=crypto.randomUUID();demoYouth.push({id,first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,phone:input.phone,address:input.address,guardian_name:input.guardian_name,guardian_phone:input.guardian_phone,guardian_email:input.guardian_email,group_name:input.group_id,active:true,attendance_rate:0,sundays:0,rehearsals:0,traffic_light:'green'});return id}
- const {data,error}=await supabase.from('young_people').insert({first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,phone:input.phone||null,address:input.address||null}).select('id').single()
+ if(USE_MOCKS||!supabase){const id=crypto.randomUUID();demoYouth.push({id,first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,sex:input.sex,phone:input.phone,address:input.address,guardian_name:input.guardian_name,guardian_phone:input.guardian_phone,guardian_email:input.guardian_email,group_name:input.group_id,active:true,attendance_rate:0,sundays:0,rehearsals:0,traffic_light:'green'});return id}
+ const {data,error}=await supabase.from('young_people').insert({first_name:input.first_name,last_name:input.last_name,birth_date:input.birth_date,sex:input.sex,phone:input.phone||null,address:input.address||null}).select('id').single()
  if(error)throw error
  try{
   if(input.group_id){const {error:linkError}=await supabase.from('young_people_groups').insert({young_person_id:data.id,group_id:input.group_id});if(linkError)throw new Error('Grupo: '+linkError.message)}
@@ -90,11 +90,11 @@ export async function updateGuardianPhone(id:string,name:string,phone:string):Pr
 }
 
 
-export type AttendancePerson = Pick<YoungPerson,'id'|'first_name'|'last_name'|'group_name'|'photo_path'>
+export type AttendancePerson = Pick<YoungPerson,'id'|'first_name'|'last_name'|'group_name'|'photo_path'|'sex'>
 export async function listAttendanceRoster(limited=false):Promise<AttendancePerson[]>{
  if(!limited)return listYouth()
- if(USE_MOCKS||!supabase)return demoYouth.filter(person=>person.active).map(({id,first_name,last_name,group_name,photo_path})=>({id,first_name,last_name,group_name,photo_path}))
- const {data,error}=await supabase.rpc('collaborator_attendance_roster')
+ if(USE_MOCKS||!supabase)return demoYouth.filter(person=>person.active).map(({id,first_name,last_name,group_name,photo_path,sex})=>({id,first_name,last_name,group_name,photo_path,sex}))
+ const {data,error}=await supabase.rpc('collaborator_attendance_roster_with_sex')
  if(error)throw error
  const {data:photos,error:photoError}=await supabase.rpc('collaborator_attendance_photos')
  // A photo outage must not prevent taking attendance.
