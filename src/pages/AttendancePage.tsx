@@ -12,6 +12,17 @@ import { useAuth } from '../state/AuthContext'
 import { canOpenPath,isCollaborator } from '../lib/access'
 import type { AttendanceStatus } from '../types/domain'
 
+const nameOrder = new Intl.Collator('es-AR', { sensitivity: 'base' })
+
+function attendanceName(person: AttendancePerson) {
+ const surname = person.last_name?.trim()
+ const givenNames = person.first_name.trim()
+ // Imported names without a separate surname cannot be split reliably.
+ if (!surname) return givenNames
+ const firstName = givenNames.split(/\s+/, 1)[0]
+ return firstName ? `${surname}, ${firstName}` : surname
+}
+
 export default function AttendancePage(){
  const {user}=useAuth();const limited=isCollaborator(user)
  const navigate=useNavigate()
@@ -42,7 +53,13 @@ export default function AttendancePage(){
  useEffect(()=>{let active=true;setStatus({});setNotice('');if(event)getAttendance(event.id).then(rows=>{if(active)setStatus(rows)}).catch(e=>{if(active)setError(`No se pudo consultar la asistencia: ${e.message}`)});return()=>{active=false}},[event?.id,date,meeting])
  const groups=['Todos',...new Set(youth.map(y=>y.group_name).filter((name):name is string=>Boolean(name)))]
  const attendees=youth.filter(y=>group==='Todos'||y.group_name===group)
- const visible=useMemo(()=>attendees.filter(y=>`${y.first_name} ${y.last_name}`.toLowerCase().includes(query.toLowerCase())).filter(y=>filter==='all'||(filter==='present'?status[y.id]==='present':status[y.id]!=='present')),[attendees,query,filter,status])
+ const visible=useMemo(()=>{
+  const search=query.trim().toLocaleLowerCase('es-AR')
+  return attendees.filter(person=>[`${person.first_name} ${person.last_name}`,`${person.last_name} ${person.first_name}`,attendanceName(person)]
+   .some(name=>name.toLocaleLowerCase('es-AR').includes(search)))
+   .filter(person=>filter==='all'||(filter==='present'?status[person.id]==='present':status[person.id]!=='present'))
+   .sort((a,b)=>nameOrder.compare(a.last_name?.trim()||a.first_name,b.last_name?.trim()||b.first_name)||nameOrder.compare(a.first_name,b.first_name))
+ },[attendees,query,filter,status])
  const present=attendees.filter(y=>status[y.id]==='present').length
  async function save(){setSaving(true);setError('');setNotice('');try{
   if(limited&&!event)throw new Error('Elegí una fecha con un encuentro ya cargado. Un instructor puede agregarlo al cronograma.');
@@ -67,11 +84,11 @@ export default function AttendancePage(){
  {error&&<div className="error-box" role="alert">{error}</div>}{limited&&!event&&<div className="empty-card">No hay un encuentro de este tipo cargado para esta fecha. Pedile a un instructor que lo agregue al cronograma.</div>}
  <div className="search-box"><Search size={19}/><input placeholder="Buscar joven…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
  <div className="segmented"><button className={filter==='all'?'active':''} onClick={()=>setFilter('all')}>Todos ({attendees.length})</button><button className={filter==='present'?'active':''} onClick={()=>setFilter('present')}>Presentes</button><button className={filter==='absent'?'active':''} onClick={()=>setFilter('absent')}>Ausentes</button></div>
- <div className="list-stack">{visible.map(y=><div className="person-row" key={y.id}><YouthAvatar firstName={y.first_name} lastName={y.last_name} photoPath={y.photo_path} onPreview={url=>setPreview({person:y,url})}/><div className="grow"><strong>{y.first_name} {y.last_name}</strong><small>{y.group_name??'Sin grupo asignado'}</small></div><button aria-label={`Cambiar asistencia de ${y.first_name} ${y.last_name}`} className={`toggle ${status[y.id]==='present'?'on':''}`} onClick={()=>setStatus(s=>({...s,[y.id]:s[y.id]==='present'?'absent':'present'}))}><span/></button></div>)}</div>
+ <div className="list-stack">{visible.map(y=><div className="person-row" key={y.id}><YouthAvatar firstName={y.first_name} lastName={y.last_name} photoPath={y.photo_path} onPreview={url=>setPreview({person:y,url})}/><div className="grow"><strong>{attendanceName(y)}</strong><small>{y.group_name??'Sin grupo asignado'}</small></div><button aria-label={`Cambiar asistencia de ${y.first_name} ${y.last_name}`} className={`toggle ${status[y.id]==='present'?'on':''}`} onClick={()=>setStatus(s=>({...s,[y.id]:s[y.id]==='present'?'absent':'present'}))}><span/></button></div>)}</div>
  <button className="primary-btn sticky-action" disabled={saving||!date||!attendees.length||(limited&&!event)} onClick={save}>{saving?'Guardando…':'Guardar asistencia'}</button>{notice&&<div className="success-box" role="status">{notice}</div>}
  </div>
  {profile}
- {!profileOpen&&preview&&<AttendancePhotoDialog name={`${preview.person.first_name} ${preview.person.last_name}`}
+ {!profileOpen&&preview&&<AttendancePhotoDialog name={attendanceName(preview.person)}
   photoUrl={preview.url} onBack={()=>setPreview(null)} onProfile={openProfile}/>}
  </>
 }
