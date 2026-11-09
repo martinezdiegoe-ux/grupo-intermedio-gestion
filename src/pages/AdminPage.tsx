@@ -1,19 +1,21 @@
 import { useEffect,useState } from 'react'
 import type { FormEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { Link,useNavigate } from 'react-router-dom'
 import DatePicker from '../components/DatePicker'
 import AppSelect from '../components/AppSelect'
 import { createYouth,listGroups } from '../services/youth'
 import { readYouthSex, YouthSexField } from '../components/YouthSexControls'
 import type { MedicalProfile } from '../types/domain'
-import { Phone,Send,Pencil,X } from 'lucide-react'
+import { Phone,Send,Pencil,ShieldCheck,X } from 'lucide-react'
 import { listAdminUsers,saveAdminUser,sendNotice } from '../services/admin'
 import type { AdminUser } from '../services/admin'
+import { useAuth } from '../state/AuthContext'
 
 const medicalFields:[keyof Omit<MedicalProfile,'young_person_id'>,string][]=[['blood_type','Grupo sanguíneo'],['allergies','Alergias'],['medications','Medicamentos'],['medication_reason','Motivo de medicación'],['health_provider','Obra social'],['insurance_member_number','Número de afiliado'],['relevant_conditions','Condiciones relevantes'],['surgeries','Cirugías'],['activity_restrictions','Restricciones físicas'],['dietary_restrictions','Restricciones alimentarias'],['emergency_notes','Notas de emergencia']]
 const value=(form:FormData,key:string)=>String(form.get(key)??'').trim()
 export default function AdminPage(){
+ const {user}=useAuth()
  const nav=useNavigate(),[groups,setGroups]=useState<{id:string;name:string}[]>([]),[error,setError]=useState(''),[saving,setSaving]=useState(false),[groupId,setGroupId]=useState('')
  const [users,setUsers]=useState<AdminUser[]>([]),[usersError,setUsersError]=useState(''),[noticeOpen,setNoticeOpen]=useState(false),[recipient,setRecipient]=useState('instructors'),[noticeBusy,setNoticeBusy]=useState(false),[noticeMessage,setNoticeMessage]=useState(''),[editingUser,setEditingUser]=useState<string|null>(null),[userBusy,setUserBusy]=useState(false)
  useEffect(()=>{listGroups().then(setGroups).catch(e=>setError('No se pudieron cargar los grupos: '+e.message))},[])
@@ -23,7 +25,7 @@ export default function AdminPage(){
  async function addYouth(e:FormEvent<HTMLFormElement>){e.preventDefault();setError('');const form=new FormData(e.currentTarget),birth_date=value(form,'birth_date');if(!birth_date){setError('Seleccioná la fecha de nacimiento.');return}setSaving(true)
   const medical=Object.fromEntries(medicalFields.map(([key])=>[key,value(form,key)||null])) as Partial<Omit<MedicalProfile,'young_person_id'>>
   try{const id=await createYouth({first_name:value(form,'first_name'),last_name:value(form,'last_name'),birth_date,sex:readYouthSex(form.get('sex')),phone:value(form,'phone'),address:value(form,'address'),group_id:value(form,'group_id'),guardian_name:value(form,'guardian_name'),guardian_phone:value(form,'guardian_phone'),guardian_email:value(form,'guardian_email'),guardian_relationship:value(form,'guardian_relationship'),guardian_address:value(form,'guardian_address'),medical,photo:form.get('photo') instanceof File&&(form.get('photo') as File).size>0?form.get('photo') as File:undefined});nav('/jovenes/'+id)}catch(err){setError('No se pudo completar el alta: '+(err instanceof Error?err.message:String(err)))}finally{setSaving(false)}}
- return <><div className="page-title"><div><h1>Panel de admin</h1><span>Gestión general</span></div></div>
+ return <><div className="page-title"><div><h1>Panel de admin</h1><span>Gestión general</span></div>{user?.role==='superadmin'&&<Link className="secondary-btn" to="/admin/auditoria"><ShieldCheck size={17}/> Auditoría</Link>}</div>
  <section className="admin-directory"><div className="row-between"><div><h2>Usuarios e instructores</h2><p className="muted">{users.filter(u=>u.active).length} usuarios activos</p></div><button className="small-primary" onClick={()=>{setNoticeOpen(true);setNoticeMessage('')}}><Send size={16}/> Enviar aviso</button></div>
  {usersError&&<div className="error-box" role="alert">{usersError}</div>}{noticeMessage&&<div className={noticeMessage.startsWith('No se')?'error-box':'success-box'} role="status">{noticeMessage}</div>}
  <div className="list-stack">{users.map(u=><div className="admin-user-card" key={u.id}><div className="admin-user-main"><div className="avatar">{u.full_name.trim().charAt(0).toUpperCase()}</div><div className="grow"><strong>{u.full_name}{!u.active?' · Inactivo':''}</strong><small>{u.role} · {u.email}</small><small>{u.phone||'Teléfono sin registrar'}</small></div></div><div className="admin-user-actions">{u.phone&&<a className="secondary-btn" href={'tel:'+u.phone.replace(/[^+\d]/g,'')} aria-label={'Llamar a '+u.full_name}><Phone size={17}/> Llamar</a>}<button type="button" className="secondary-btn" onClick={()=>setEditingUser(editingUser===u.id?null:u.id)}><Pencil size={17}/> Editar datos</button></div>{editingUser===u.id&&<form className="admin-edit-form" onSubmit={e=>void saveUser(e,u.id)}><label>Nombre<input name="full_name" defaultValue={u.full_name} required/></label><label>Teléfono<input name="phone" type="tel" defaultValue={u.phone??''} placeholder="342 000 0000"/></label><small>El correo de acceso se administra desde Supabase Auth.</small><div className="quick-grid"><button type="button" className="secondary-btn" onClick={()=>setEditingUser(null)}>Cancelar</button><button className="primary-btn" disabled={userBusy}>{userBusy?'Guardando…':'Guardar'}</button></div></form>}</div>)}{!usersError&&!users.length&&<div className="empty-card">No hay usuarios registrados.</div>}</div>

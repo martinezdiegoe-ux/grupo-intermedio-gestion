@@ -57,3 +57,9 @@
 .graduation-filter { align-items: center; flex-wrap: wrap; gap: 8px; }
 .graduation-filter button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
 .graduation-filter small { color: #aaa4c9; }
+
+.audit-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;margin-block:.65rem}
+.audit-panel{margin-top:.85rem}
+.audit-list{list-style:none;padding:0;margin:1rem 0;display:grid;gap:.6rem}
+.audit-list li{display:grid;gap:.25rem;padding:.75rem;border:1px solid #343655;border-radius:.75rem;overflow-wrap:anywhere}
+.audit-list small{color:#aaa4c9}
